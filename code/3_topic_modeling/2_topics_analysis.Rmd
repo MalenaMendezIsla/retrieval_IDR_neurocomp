@@ -1,0 +1,58 @@
+---
+title: "Topics by strategy"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(glue)
+library(scales)
+```
+
+```{r}
+strategy_topic_500 <- read_csv('../../results/topic_modeling/strategy_topic_100.csv')
+topic_info_500 <- read_csv('../../results/topic_modeling/topic_info_100.csv')
+```
+
+```{r, fig.height=10}
+
+topics_by_strategy <- function(s="E2")
+{
+  df <- strategy_topic_500 |> 
+  filter(topic_100!=-1) |> 
+  left_join(topic_info_500, by = join_by(topic_100==Topic)) 
+  
+  topics_order <- 
+  df |> 
+    filter(topic_100!=-1, strategy==s) |> 
+  arrange(-count) |> pull(Name)
+
+missing_topics <- df |> 
+    filter(topic_100!=-1) |> 
+  distinct(Name) |> 
+  filter(!(Name %in% topics_order)) |> pull(Name)
+
+plt <- df |> 
+  group_by(strategy) |> 
+  mutate(p = count/sum(count),
+         Name = factor(Name,levels=c(topics_order,missing_topics)))|>
+  ggplot(aes(Name,p, fill=strategy))+
+  geom_col()+
+  facet_grid(.~strategy)+
+  coord_flip()+
+  theme_minimal()+
+  guides(fill="none")+
+  scale_y_continuous(labels=percent)+
+  labs(x='proportion', y= 'topics')
+
+ggsave(plot = plt,filename = glue('../../results/topic_modeling/topics_by_strategy{s}.png'),height = 16, width = 12)
+}
+```
+
+```{r}
+topics_by_strategy("E1")
+topics_by_strategy(s = "E2")
+topics_by_strategy("E3")
+topics_by_strategy("E4")
+```
+
